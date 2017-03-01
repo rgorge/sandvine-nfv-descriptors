@@ -1,0 +1,13 @@
+name: sandvine_pts_vnfd
+summary: Sandvine PTS proxy charm
+maintainer: mmarchetti@sandvine.com
+description: |
+ Sandvine PTS Proxy Charm for OSM
+series:
+ - trusty
+ - xenial
+tags:
+  # Replace "misc" with one or more whitelisted tags from this list:
+  # https://jujucharms.com/docs/stable/authors-charm-metadata
+  - misc
+subordinate: false

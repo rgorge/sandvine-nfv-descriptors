@@ -1,0 +1,13 @@
+options:
+  fastpath-service-ports:
+    type: string
+    default: ""
+    description: "A comma separated list of ports designated as fastpath service ports"
+  fastpath-subscriber-ports:
+    type: string
+    default: ""
+    description: "A comma separated list of ports designated as fastpath subscriber ports"
+  fastpath-internet-ports:
+    type: string
+    default: ""
+    description: "A comma separated list of ports designated as fastpath internet ports"

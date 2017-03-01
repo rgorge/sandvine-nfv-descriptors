@@ -1,0 +1,35 @@
+vnfd:vnfd-catalog:
+    vnfd:vnfd:
+    -   vnfd:connection-point:
+        -   vnfd:name: mgmt-cp
+            vnfd:type: VPORT
+        -   vnfd:name: cp1
+            vnfd:type: VPORT
+        vnfd:description: a simple server 
+        vnfd:id: server-vnfd
+        vnfd:mgmt-interface:
+          vnfd:vdu-id: iovdu_0
+        vnfd:name: server
+        vnfd:service-function-chain: UNAWARE
+        vnfd:short-name: server
+        vnfd:vdu:
+        -   vnfd:external-interface:
+            -   vnfd:name: 1-mgmt-cp
+                vnfd:virtual-interface:
+                    vnfd:type: OM-MGMT
+                vnfd:vnfd-connection-point-ref: mgmt-cp 
+            -   vnfd:name: 2-eth0
+                vnfd:virtual-interface:
+                    vnfd:type: VIRTIO
+                vnfd:vnfd-connection-point-ref: cp1
+            vnfd:id: iovdu_0
+            vnfd:guest-epa:
+                vnfd:cpu-pinning-policy: ANY
+            vnfd:image: Ubuntu 16.04.1 LTS - Xenial Xerus - 64-bit - Cloud Based Image
+            vnfd:image-checksum: a08df2c80f8f9ff1db06a90ca70a9c48
+            vnfd:name: vdu-1
+            vnfd:vm-flavor:
+                vnfd:memory-mb: '2048'
+                vnfd:storage-gb: '5'
+                vnfd:vcpu-count: '1'
+        vnfd:version: '1.0'

@@ -1,0 +1,2 @@
+paramiko>=1.16.0,<1.17
+git+https://github.com/mfmarche/pysvapi.git#egg=pysvapi
