@@ -1,0 +1,62 @@
+vnfd:vnfd-catalog:
+    vnfd:vnfd:
+    -   vnfd:connection-point:
+        -   vnfd:name: subscriber-cp
+            vnfd:id:   a 
+            vnfd:type: VPORT
+        -   vnfd:name: internet-cp
+            vnfd:id:   b
+            vnfd:type: VPORT
+        -   vnfd:name: service-cp
+            vnfd:id:   c
+            vnfd:type: VPORT
+        vnfd:description: Traffic Steering Engine
+        vnfd:id: id_tse_vnf
+        vnfd:logo: sandvine_logo.png
+        vnfd:mgmt-interface:
+            vnfd:vdu-id: vdu0
+        vnfd:name: TSE
+        vnfd:short-name: TSE
+        vnfd:service-function-chain: UNAWARE
+        vnfd:vdu:
+        -   vnfd:cloud-init-file: cloud_init.cfg
+            vnfd:external-interface:
+            -   vnfd:name: 1-subscriber-cp
+                vnfd:id: a
+                vnfd:virtual-interface:
+                    vnfd:type: VIRTIO
+                vnfd:vnfd-connection-point-ref: subscriber-cp 
+            -   vnfd:name: 2-internet-cp
+                vnfd:id: b
+                vnfd:virtual-interface:
+                    vnfd:type: VIRTIO
+                vnfd:vnfd-connection-point-ref: internet-cp
+            -   vnfd:name: 3-service-cp
+                vnfd:id: c
+                vnfd:virtual-interface:
+                    vnfd:type: VIRTIO
+                vnfd:vnfd-connection-point-ref: service-cp
+            vnfd:guest-epa:
+                vnfd:cpu-pinning-policy: ANY
+            vnfd:id: vdu0
+            vnfd:image: TSE_1.00.00-0075_x86_64_el7.pts_tse_dev_integration
+            vnfd:name: vdu0
+            vnfd:vm-flavor:
+                vnfd:memory-mb: '5120'
+                vnfd:storage-gb: '5'
+                vnfd:vcpu-count: '3'
+        vnfd:version: '1.0'
+        vnfd:vnf-configuration:
+            vnfd:config-attributes:
+                vnfd:config-delay: '0'
+                vnfd:config-priority: '0'
+            vnfd:config-template: "\n#!/bin/bash\n\n"
+            vnfd:initial-config-primitive:
+            -   vnfd:name: initial-config-primitive-1
+                vnfd:parameter:
+                -   vnfd:name: license_server 
+                    vnfd:value: 'None'
+                vnfd:seq: '1'
+                vnfd:user-defined-script: tse_initial_configuration.py
+            vnfd:script:
+                vnfd:script-type: bash

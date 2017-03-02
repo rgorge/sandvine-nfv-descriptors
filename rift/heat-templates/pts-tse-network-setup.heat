@@ -1,0 +1,88 @@
+description: "Rift network creation for pts/tse networks with port security disabled"
+heat_template_version: '2013-05-23'
+outputs:
+parameters:
+resources:
+  mgmt_net:
+    type: OS::Neutron::Net
+    properties:
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-mgmt
+  mgmt_subnet:
+    properties:
+      allocation_pools:
+      - {end: 192.168.192.60, start: 192.168.192.30}
+      cidr: 192.168.192.0/26
+      dns_nameservers: [10.128.0.25, 10.128.0.26]
+      enable_dhcp: true
+      host_routes:
+      - {destination: 10.0.0.0/8, nexthop: 192.168.192.1}
+      - {destination: 192.168.128.0/17, nexthop: 192.168.192.1}
+      network: {get_resource: mgmt_net}
+    type: OS::Neutron::Subnet
+  router_mgmt_if:
+    properties:
+      router: {get_resource: rtr_mgmt}
+      subnet: {get_resource: mgmt_subnet}
+    type: OS::Neutron::RouterInterface
+  rtr_mgmt:
+    properties:
+      admin_state_up: true
+      external_gateway_info:
+        network: ext-net
+    type: OS::Neutron::Router
+
+  subscriber_net:
+    properties:
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-subscriber
+      port_security_enabled: false
+    type: OS::Neutron::Net
+  subscriber_net_subnet:
+    properties:
+      allocation_pools:
+      - {end: 10.192.1.254, start: 10.192.1.2}
+      cidr: 10.192.0.0/16
+      enable_dhcp: true
+      network: {get_resource: subscriber_net}
+    type: OS::Neutron::Subnet
+  internet_net:
+    properties:
+      port_security_enabled: false
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-internet
+    type: OS::Neutron::Net
+  internet_net_subnet:
+    properties:
+      allocation_pools:
+      - {end: 10.192.2.254, start: 10.192.2.2}
+      cidr: 10.192.0.0/16
+      enable_dhcp: true
+      network: {get_resource: internet_net}
+    type: OS::Neutron::Subnet
+  service_net:
+    properties:
+      port_security_enabled: false
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-service
+    type: OS::Neutron::Net
+  service_net_subnet:
+    properties:
+      allocation_pools:
+      - {end: 10.192.3.254, start: 10.192.3.2}
+      cidr: 10.192.0.0/16
+      enable_dhcp: false
+      network: {get_resource: service_net}
+    type: OS::Neutron::Subnet

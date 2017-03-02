@@ -1,0 +1,44 @@
+vnfd:vnfd-catalog:
+    vnfd:vnfd:
+    -   vnfd:connection-point:
+        -   vnfd:name: service-cp
+            vnfd:type: VPORT
+        vnfd:description: Sandvine Control Center
+        vnfd:id: id_control_center
+        vnfd:logo: sandvine_logo.png
+        vnfd:mgmt-interface:
+          vnfd:vdu-id: id_consul
+        vnfd:name: Sandvine Control Center
+        vnfd:service-function-chain: UNAWARE
+        vnfd:short-name: ControlCenter
+        vnfd:vdu:
+        -   vnfd:name: consul
+            vnfd:id:   id_consul
+            vnfd:external-interface:
+            -   vnfd:name: service-cp
+                vnfd:virtual-interface:
+                    vnfd:type: VIRTIO
+                vnfd:vnfd-connection-point-ref: service-cp
+            vnfd:guest-epa:
+                vnfd:cpu-pinning-policy: ANY
+            vnfd:image: Ubuntu 16.04.1 LTS - Xenial Xerus - 64-bit - Cloud Based Image
+            vnfd:cloud-init-file: cloud_init.cfg
+            vnfd:vm-flavor:
+                vnfd:memory-mb: '1024'
+                vnfd:storage-gb: '8'
+                vnfd:vcpu-count: '1'
+        vnfd:version: '1.0'
+        vnfd:vnf-configuration:
+            vnfd:config-attributes:
+                vnfd:config-delay: '0'
+                vnfd:config-priority: '5'
+            vnfd:config-template: "\n#!/bin/bash\n\n"
+            vnfd:initial-config-primitive:
+            -   vnfd:name: initial-config-primitive-1
+                vnfd:parameter:
+                -   vnfd:name: rate
+                    vnfd:value: '5'
+                vnfd:seq: '1'
+                vnfd:user-defined-script: cc_initial_configuration.py
+            vnfd:script:
+                vnfd:script-type: bash

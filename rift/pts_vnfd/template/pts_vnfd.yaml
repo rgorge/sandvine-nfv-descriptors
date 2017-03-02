@@ -1,0 +1,64 @@
+vnfd:vnfd-catalog:
+    vnfd:vnfd:
+    -   vnfd:connection-point:
+        -   vnfd:name: service-cp
+            vnfd:type: VPORT
+        vnfd:description: Policy Traffic Switch
+        vnfd:id: id_pts_vnf
+        vnfd:logo: sandvine_logo.png
+        vnfd:mgmt-interface:
+          vnfd:vdu-id: vdu0
+        vnfd:name: PTS
+        vnfd:short-name: PTS
+        vnfd:service-function-chain: UNAWARE
+        vnfd:vdu:
+        -   vnfd:external-interface:
+            -   vnfd:name: service-cp
+                vnfd:virtual-interface:
+                    vnfd:type: VIRTIO
+                vnfd:vnfd-connection-point-ref: service-cp
+            vnfd:id: vdu0
+            vnfd:guest-epa:
+                vnfd:cpu-pinning-policy: ANY
+            vnfd:image: PTS_7.40.00-0309_x86_64_el7.pts_tse_dev_integration
+            vnfd:name: vdu0
+            vnfd:cloud-init-file: cloud_init.cfg
+            vnfd:vm-flavor:
+                vnfd:memory-mb: '5120'
+                vnfd:storage-gb: '5'
+                vnfd:vcpu-count: '3'
+        vnfd:http-endpoint:
+        -   port: 9500
+            method: "POST"
+            polling_interval_secs: 2
+            data: "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"show system resources 20\",\"params\":{}}"
+            path: "operations/v1"
+            https: "true"
+        monitoring-param:
+        -   http-endpoint-ref: "operations/v1"
+            units: "flows"
+            id: "free-flows"
+            value-type: "INT"
+            json-query-method: "JSONPATH"
+            widget-type: "GAUGE"
+            json-query-params: 
+                 json-path: "$.result.resources[0].free"
+            description: "free flows"
+            name: "monitoring-free-flows"
+            numeric-constraints:
+               nsd:min-value: 0
+               nsd:max-value: 2000000 
+        -   http-endpoint-ref: "operations/v1"
+            units: "flows"
+            id: "used-flows"
+            value-type: "INT"
+            json-query-method: "JSONPATH"
+            widget-type: "GAUGE"
+            json-query-params: 
+                json-path: "$.result.resources[0].used"
+            description: "used flows"
+            name: "monitoring-used-flows"
+            numeric-constraints:
+               nsd:min-value: 0
+               nsd:max-value: 2000000 
+        vnfd:version: '1.0'

@@ -1,0 +1,36 @@
+vnfd:vnfd-catalog:
+    vnfd:vnfd:
+    -   vnfd:description: Subscriber Policy Broker 
+        vnfd:id: id_spb_vnf
+        vnfd:logo: sandvine_logo.png
+        vnfd:mgmt-interface:
+          vnfd:vdu-id: vdu0
+        vnfd:name: SPB
+        vnfd:service-function-chain: UNAWARE
+        vnfd:short-name: SPB
+        vnfd:vdu:
+        -   vnfd:name: vdu0
+            vnfd:id:   vdu0
+            vnfd:guest-epa:
+                vnfd:cpu-pinning-policy: ANY
+            vnfd:image: spb
+            vnfd:cloud-init-file: cloud_init.cfg
+            vnfd:vm-flavor:
+                vnfd:memory-mb: '3172'
+                vnfd:storage-gb: '10'
+                vnfd:vcpu-count: '2'
+        vnfd:version: '1.0'
+        vnfd:vnf-configuration:
+            vnfd:config-attributes:
+                vnfd:config-delay: '0'
+                vnfd:config-priority: '5'
+            vnfd:config-template: "\n#!/bin/bash\n\n"
+            vnfd:initial-config-primitive:
+            -   vnfd:name: initial-config-primitive-1
+                vnfd:parameter:
+                -   vnfd:name: rate
+                    vnfd:value: '5'
+                vnfd:seq: '1'
+                vnfd:user-defined-script: spb_initial_configuration.py
+            vnfd:script:
+                vnfd:script-type: bash

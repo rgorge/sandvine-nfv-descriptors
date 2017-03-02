@@ -1,0 +1,41 @@
+{
+  "variable": {
+    "endpoint": "",
+    "tenant_name": "",
+    "username": "",
+    "password": "",
+    "region": "RegionOne",
+    "ssh_username": "ubuntu",
+    "image_name": "rift-4.3.3",
+    "source_image": "",
+    "flavor": "m1.large",
+    "floating_ip_pool": "ext-net",
+    "networks",""
+  },
+  "builders": [
+    {
+      "type": "openstack",
+      "identity_endpoint": "{{user `endpoint`}}",
+      "tenant_name": "{{user `tenant_name`}}",
+      "username": "{{user `username`}}",
+      "password": "{{user `password`}}",
+      "region": "{{user `region`}}",
+      "ssh_username": "{{user `ssh_username`}}",
+      "image_name": "{{user `image_name`}}",
+      "source_image": "{{user `source_image`}}",
+      "flavor": "{{user `flavor`}}",
+      "insecure": "true",
+      "floating_ip_pool": "ext-net",
+      "networks": "{{user `networks`}}",
+      "security_groups": "default"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "scripts": [
+            "scripts/rift-dev-install.sh"
+      ]
+    }
+  ]
+}

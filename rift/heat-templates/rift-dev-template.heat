@@ -1,0 +1,98 @@
+heat_template_version: 2013-05-23
+description: >
+  Rift Development Server
+parameters:
+  ssh_key:
+    type: string
+    label: "Your SSH keypair name (pre-create please!)"
+    description: |
+        If you have not created your key, please go to
+        Project/Compute/Access & Security, and either import
+        one or create one. If you create it, make sure you keep
+        the downloaded file (as you don't get a second chance)
+    default: default
+  control_network:
+    type: string
+    default: control
+  rift_image:
+    type: string
+    label: "rift image"
+    description: "rift Image"
+    default: xenial
+  floating_pool:
+    type: string
+    default: "ext-net"
+    description: floating network pool name
+resources:
+  floating_ip:
+    type: OS::Nova::FloatingIP
+    properties:
+      pool: { get_param: floating_pool }
+  ctrl_net:
+    type: OS::Neutron::Net
+    properties:
+      name: { str_replace: { params: { $stack_name: { get_param: 'OS::stack_name' } }, template: '$stack_name-ctrl-net' } }
+  rift:
+    type: OS::Nova::Server
+    properties:
+      name: { str_replace: { params: { $stack_name: { get_param: 'OS::stack_name' } }, template: '$stack_name-rift' } }
+      key_name: { get_param: 'ssh_key' }
+      image: { get_param: 'rift_image' }
+      flavor: "m1.large"
+      networks:
+        - network: { get_param: control_network }
+      user_data_format: RAW
+      user_data: |
+        #cloud-config
+        write_files:
+        - path: /etc/issue
+          content: |
+            Ubuntu 16.04.1 LTS \n \l
+
+        - path: /etc/systemd/system/launchpad.service
+          content: |
+            [Unit]
+            Description=RIFT.ware Launchpad
+            After=network-online.target
+
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=/bin/sh -c 'nohup sudo -b -H /usr/rift/rift-shell -r -i /usr/rift -a /usr/rift/.artifacts -- ./demos/launchpad.py'
+            ExecStop=/bin/sh -c 'killall rwmain'
+
+            [Install]
+            WantedBy=default.target
+
+        packages:
+            - git 
+            - make
+
+        runcmd:
+            - apt-get update
+            - cd /tmp
+            - sed -i  's/\(APT::Periodic.*\)"1"/\1 "0"/g' /etc/apt/apt.conf.d/20auto-upgrades
+            - wget -nd http://repo.riftio.com/releases/open.riftio.com/4.3.3/install-riftware
+            - bash ./install-riftware platform
+            - git clone https://github.com/RIFTIO/UI
+            - cd UI
+            - git checkout RIFT.ware-4.3.3.1
+            - make -j4 CONF=CONF_BASIC
+            - sudo make install CONFD=CONFD_BASIC
+            - cd ..
+            - git clone https://github.com/mfmarche/SO
+            - cd SO
+            - git checkout sandvine-fixes
+            - make -j4 CONF=CONF_BASIC
+            - sudo make install CONFD=CONFD_BASIC
+            - cd ..
+            - mkdir /var/log/rift
+            - chmod 666 /var/log/rift
+            - systemctl enable launchpad
+            - systemctl start launchpad
+
+  association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: floating_ip }
+      server_id: { get_resource: rift }

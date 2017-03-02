@@ -1,0 +1,76 @@
+nsd:nsd-catalog:
+    nsd:nsd:
+    -   nsd:constituent-vnfd:
+        -   nsd:member-vnf-index: '1'
+            nsd:start-by-default: 'true'
+            nsd:vnfd-id-ref: id_pts_vnf
+        -   nsd:member-vnf-index: '2'
+            nsd:start-by-default: 'true'
+            nsd:vnfd-id-ref: id_tse_vnf
+        -   nsd:member-vnf-index: '3'
+            nsd:start-by-default: 'true'
+            nsd:vnfd-id-ref: id_spb_vnf
+        scaling-group-descriptor: 
+        -   name: "scaling_PTS"
+            vnfd-member: 
+            -   count: 1
+                member-vnf-index-ref: 1
+            min-instance-count: 0
+            max-instance-count: 10
+            scaling-config-action: 
+            -   trigger: "post-scale-out"
+                ns-config-primitive-name-ref: "pts_post_scale_out"
+            scaling-policy:
+            -   scaling-type: "automatic"
+                scale-out-operation-type: "OR"
+                cooldown-time: 10
+                scale-in-operation-type: "AND"
+                enabled: "true"
+                threshold-time: 10
+                name: "used-flows"
+                scaling-criteria:
+                -   
+                    ns-monitoring-param-ref: "used-flows"
+                    name: "used-flows"
+                    scale-out-threshold: 10000
+        monitoring-param:
+        -   widget-type: "GAUGE"
+            aggregation-type: "AVERAGE"
+            units: "flows"
+            name: "used-flows"
+            value-type: "INT"
+            id: "used-flows"
+            vnfd-monitoring-param:
+            -   vnfd-id-ref: "id_pts_vnf"
+                vnfd-monitoring-param-ref: "used-flows"
+        service-primitive: 
+        -   name: "pts_post_scale_out"
+            user-defined-script: "pts_scale.py"
+        nsd:id: 27b66d07-203a-4a84-88f2-e44192caa405
+        nsd:initial-config-primitive:
+        -   nsd:name: configure service function
+            nsd:seq: '2'
+            nsd:user-defined-script: pts_scale.py
+        nsd:name: TSE-elastic-PTS
+        nsd:vld:
+        -   nsd:id: cc4cf
+            nsd:name: subscriber
+            nsd:vnfd-connection-point-ref:
+            -   nsd:member-vnf-index-ref: '2'
+                nsd:vnfd-connection-point-ref: subscriber-cp
+                nsd:vnfd-id-ref: id_tse_vnf
+        -   nsd:id: 7b8b0
+            nsd:name: internet
+            nsd:vnfd-connection-point-ref:
+            -   nsd:member-vnf-index-ref: '2'
+                nsd:vnfd-connection-point-ref: internet-cp
+                nsd:vnfd-id-ref: id_tse_vnf
+        -   nsd:id: 6c88f
+            nsd:name: service
+            nsd:vnfd-connection-point-ref:
+            -   nsd:member-vnf-index-ref: '2'
+                nsd:vnfd-connection-point-ref: service-cp
+                nsd:vnfd-id-ref: id_tse_vnf
+            -   nsd:member-vnf-index-ref: '1'
+                nsd:vnfd-connection-point-ref: service-cp
+                nsd:vnfd-id-ref: id_pts_vnf

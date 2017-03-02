@@ -1,0 +1,136 @@
+heat_template_version: 2013-05-23
+description: >
+  Rift Development Server with Installation of Sandvine VNF's
+parameters:
+  ssh_key:
+    type: string
+    label: "Your SSH keypair name (pre-create please!)"
+    description: |
+        If you have not created your key, please go to
+        Project/Compute/Access & Security, and either import
+        one or create one. If you create it, make sure you keep
+        the downloaded file (as you don't get a second chance)
+    default: "default"
+  rift_image:
+    type: string
+    label: "rift image"
+    description: "rift Image"
+    default: rift-4.3.3
+resources:
+  rift:
+    type: OS::Nova::Server
+    properties:
+      name: { str_replace: { params: { $stack_name: { get_param: 'OS::stack_name' } }, template: '$stack_name-rift' } }
+      key_name: { get_param: 'ssh_key' }
+      image: { get_param: 'rift_image' }
+      admin_user: "cloud"
+      flavor: "m1.large"
+      networks:
+        - network: { get_resource: mgmt_net }
+      user_data_format: RAW
+      user_data: |
+        #cloud-config
+         runcmd:
+            - wget https://git.sandvine.rocks/mmarchetti/rift/raw/master/scripts/install-vnfs.sh -P /tmp/
+            - chmod +x /tmp/install-vnfs.sh
+            - /tmp/install-vnfs.sh
+  mgmt_net:
+    properties:
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-control
+    type: OS::Neutron::Net
+  mgmt_subnet:
+    properties:
+      allocation_pools:
+      - {end: 192.168.192.200, start: 192.168.192.2}
+      cidr: 192.168.192.0/24
+      enable_dhcp: true
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-control-subnet
+      network: {get_resource: mgmt_net}
+    type: OS::Neutron::Subnet
+  router_mgmt_if:
+    properties:
+      router_id: {get_resource: rtr_mgmt}
+      subnet_id: {get_resource: mgmt_subnet}
+    type: OS::Neutron::RouterInterface
+  rtr_mgmt:
+    properties:
+      admin_state_up: true
+      external_gateway_info:
+        network: ext-net
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-rtr
+    type: OS::Neutron::Router
+  subscriber_net:
+    properties:
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-subscriber
+    type: OS::Neutron::Net
+  subscriber_net_subnet:
+    properties:
+      allocation_pools:
+      - {end: 192.168.193.100, start: 192.168.193.2}
+      cidr: 192.168.193.0/24
+      enable_dhcp: false
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-subscriber-subnet
+      network: {get_resource: subscriber_net}
+    type: OS::Neutron::Subnet
+  internet_net:
+    properties:
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-internet
+    type: OS::Neutron::Net
+  internet_net_subnet:
+    properties:
+      allocation_pools:
+      - {end: 192.168.193.200, start: 192.168.193.101}
+      cidr: 192.168.193.0/24
+      enable_dhcp: false
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-internet-subnet
+      network: {get_resource: internet_net}
+    type: OS::Neutron::Subnet
+  service_net:
+    properties:
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-service
+    type: OS::Neutron::Net
+  service_net_subnet:
+    properties:
+      allocation_pools:
+      - {end: 192.168.194.200, start: 192.168.194.2}
+      cidr: 192.168.194.0/24
+      enable_dhcp: false
+      name:
+        str_replace:
+          params:
+            $stack_name: {get_param: 'OS::stack_name'}
+          template: $stack_name-service-subnet
+      network: {get_resource: service_net}
+    type: OS::Neutron::Subnet

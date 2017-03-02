@@ -1,0 +1,28 @@
+nsd:nsd-catalog:
+    nsd:nsd:
+    -   nsd:name: cc_nsd
+        nsd:constituent-vnfd:
+        -   nsd:member-vnf-index: '1'
+            nsd:start-by-default: 'true'
+            nsd:vnfd-id-ref: id_control_center
+        scaling-group-descriptor:
+        -   name: "cc scaling"
+            vnfd-member: 
+            -   count: 2
+                member-vnf-index-ref: 1
+            min-instance-count: 0
+            max-instance-count: 1
+            scaling-config-action: 
+            -   trigger: "post-scale-out"
+                ns-config-primitive-name-ref: "cc_post_scale_out"
+        service-primitive: 
+        -   name: "cc_post_scale_out"
+            user-defined-script: "cc_scale.py"
+        nsd:id: id_cc_nsd
+        nsd:vld:
+        -   nsd:id: id_service
+            nsd:name: service
+            nsd:vnfd-connection-point-ref:
+            -   nsd:member-vnf-index-ref: '1'
+                nsd:vnfd-connection-point-ref: service-cp
+                nsd:vnfd-id-ref: id_control_center
