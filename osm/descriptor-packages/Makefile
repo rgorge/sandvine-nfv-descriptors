@@ -66,11 +66,11 @@ $(VNFD_CONFIG_KEYS): $(KEY_DIR)
 	$(Q)cat $@ | sed -e ':a;N;$$!ba;s/\n//g' > $@.$(VNFD_CONFIG_KEY_STRING)
 
 $(VNFD_BUILD_DIRS): TARGET=$(notdir $@)
-$(VNFD_BUILD_DIRS):
+$(VNFD_BUILD_DIRS): $(VNFD_CONFIG_KEYS)
 	$(Q)mkdir -p $(VNFD_BUILD_DIR) 
 	$(Q)cp -rf $(VNFD_SRC_DIR)/$(TARGET)/ $(VNFD_BUILD_DIR)
 	$(Q)KEYSTRING=$$(cat $(KEY_DIR)/$(TARGET)/$(VNFD_CONFIG_KEY_NAME).$(VNFD_CONFIG_KEY_STRING)); \
-	sed -i "s%__SSH_PRIVATE_KEY__%$(KEYSTRING)%g" $(VNFD_BUILD_DIR)/$(TARGET)/$(TARGET).yaml
+	sed -i "s%__SSH_PRIVATE_KEY__%$$KEYSTRING%g" $(VNFD_BUILD_DIR)/$(TARGET)/$(TARGET).yaml
 	$(Q)cp -rf $(JUJU_BUILD_DIR)/$(TARGET) $(VNFD_BUILD_DIR)/$(TARGET)/charms
 	$(Q)echo "ssh_authorized_keys:" >> $(VNFD_BUILD_DIR)/$(TARGET)/$(CLOUD_INIT_FILE)
 	$(Q)echo -n "  - " >> $(VNFD_BUILD_DIR)/$(TARGET)/$(CLOUD_INIT_FILE)
