@@ -1,4 +1,4 @@
-name: sandvine_pts_vnfd
+name: sandvine-pts-proxy
 summary: Sandvine PTS proxy charm
 maintainer: mmarchetti@sandvine.com
 description: |

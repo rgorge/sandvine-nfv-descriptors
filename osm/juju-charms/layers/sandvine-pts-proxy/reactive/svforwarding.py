@@ -45,8 +45,8 @@ def setup_ports():
         log('sshproxy not yet fully configured', 'DEBUG')
         return
  
-    sess_pci=sshdriver.ElementDriverSSH(cfg['ssh-hostname'],private_key=cfg['ssh-private-key'])
-    sess_port=sshdriver.ElementDriverSSH(cfg['ssh-hostname'],private_key=cfg['ssh-private-key'])
+    sess_pci=sshdriver.ElementDriverSSH(cfg['ssh-hostname'],private_key=cfg['ssh-private-key'].replace('\\n','\n'))
+    sess_port=sshdriver.ElementDriverSSH(cfg['ssh-hostname'],private_key=cfg['ssh-private-key'].replace('\\n','\n'))
 
     do_commit=False
     if get_state('config.changed.fastpath-service-ports',False) is None:
