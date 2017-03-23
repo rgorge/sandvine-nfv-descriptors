@@ -44,9 +44,14 @@ def setup_ports():
         status_set('blocked','need sshproxy configured')
         log('sshproxy not yet fully configured', 'DEBUG')
         return
- 
-    sess_pci=sshdriver.ElementDriverSSH(cfg['ssh-hostname'],private_key=cfg['ssh-private-key'].replace('\\n','\n'))
-    sess_port=sshdriver.ElementDriverSSH(cfg['ssh-hostname'],private_key=cfg['ssh-private-key'].replace('\\n','\n'))
+
+
+    #hostname could contain a dual ip, one for floating and non-floating.
+    #appears that the floating is always the first entry.
+    host=cfg['ssh-hostname'].split(';')[0]
+
+    sess_pci=sshdriver.ElementDriverSSH(host,private_key=cfg['ssh-private-key'].replace('\\n','\n'))
+    sess_port=sshdriver.ElementDriverSSH(host,private_key=cfg['ssh-private-key'].replace('\\n','\n'))
 
     do_commit=False
     if get_state('config.changed.fastpath-service-ports',False) is None:
