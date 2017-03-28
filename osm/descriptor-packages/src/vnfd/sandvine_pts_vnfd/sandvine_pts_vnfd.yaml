@@ -72,7 +72,7 @@ vnfd:vnfd-catalog:
             vnfd:id: iovdu_0
             vnfd:guest-epa:
                 vnfd:cpu-pinning-policy: ANY
-            vnfd:image: PTS_7.40.00-0309_x86_64_el7
+            vnfd:image: PTS_7.40.01
             vnfd:cloud-init-file: cloud_init.cfg
             vnfd:name: vdu-1
             vnfd:vm-flavor:

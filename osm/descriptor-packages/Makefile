@@ -20,7 +20,7 @@ BUILD_DIR = build
 
 JUJU_BUILD_DIR = ../juju-charms/builds
 
-NSDS := sandvine_pts_ns
+NSDS := sandvine_pts_ns sandvine_spb_ns
 NSD_SRC_DIR := src/nsd
 NSD_BUILD_DIR := $(BUILD_DIR)/nsd
 
@@ -30,7 +30,7 @@ NSD_PKGS := $(addsuffix .tar.gz, $(NSDS))
 NSD_BUILD_PKGS := $(addprefix $(NSD_BUILD_DIR)_pkgs/, $(NSD_PKGS))
 KEY_DIR := $(BUILD_DIR)/keys
 
-VNFDS := sandvine_pts_vnfd
+VNFDS := sandvine_pts_vnfd sandvine_spb_vnfd
 VNFD_SRC_DIR := src/vnfd
 VNFD_BUILD_DIR := $(BUILD_DIR)/vnfd
 

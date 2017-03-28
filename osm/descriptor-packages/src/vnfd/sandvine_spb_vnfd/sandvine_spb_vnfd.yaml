@@ -1,0 +1,46 @@
+#
+#   Copyright 2017 Sandvine Inc.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#
+vnfd:vnfd-catalog:
+    vnfd:vnfd:
+    -   vnfd:connection-point:
+        -   vnfd:name: mgmt0
+            vnfd:type: VPORT
+        vnfd:description: Sandvine Subscriber Policy Broker
+        vnfd:id: id_spb_vnf
+        vnfd:logo: sandvine_logo.png
+        vnfd:mgmt-interface:
+          vnfd:vdu-id: iovdu_0
+        vnfd:name: spb
+        vnfd:service-function-chain: UNAWARE
+        vnfd:short-name: spb
+        vnfd:vdu:
+        -   vnfd:external-interface:
+            -   vnfd:name: a-mgmt0
+                vnfd:virtual-interface:
+                    vnfd:type: OM-MGMT
+                vnfd:vnfd-connection-point-ref: mgmt0
+            vnfd:id: iovdu_0
+            vnfd:guest-epa:
+                vnfd:cpu-pinning-policy: ANY
+            vnfd:image: svspb-6.65.0078-vpl-1-centos6-amd64
+            vnfd:cloud-init-file: cloud_init.cfg
+            vnfd:name: vdu-1
+            vnfd:vm-flavor:
+                vnfd:memory-mb: '3172'
+                vnfd:storage-gb: '10'
+                vnfd:vcpu-count: '2'
+        vnfd:version: '1.0'
