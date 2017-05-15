@@ -3,13 +3,14 @@ vnfd:vnfd-catalog:
     -   vnfd:connection-point:
         -   vnfd:name: cp1
             vnfd:type: VPORT
-        vnfd:description: a simple server 
-        vnfd:id: server-vnfd
+        vnfd:description: a dpdk based pktgen generator
+        vnfd:id: pktgen-vnfd
+        vnfd:logo: dpdk.png
         vnfd:mgmt-interface:
           vnfd:vdu-id: iovdu_0
-        vnfd:name: server
+        vnfd:name: pktgen
         vnfd:service-function-chain: UNAWARE
-        vnfd:short-name: server
+        vnfd:short-name: pktgen
         vnfd:vdu:
         -   vnfd:external-interface:
             -   vnfd:name: eth0
@@ -23,7 +24,7 @@ vnfd:vnfd-catalog:
             vnfd:name: vdu-1
             vnfd:cloud-init-file: cloud_init.cfg
             vnfd:vm-flavor:
-                vnfd:memory-mb: '2048'
-                vnfd:storage-gb: '20'
-                vnfd:vcpu-count: '1'
+                vnfd:memory-mb: '4096'
+                vnfd:storage-gb: '40'
+                vnfd:vcpu-count: '2'
         vnfd:version: '1.0'

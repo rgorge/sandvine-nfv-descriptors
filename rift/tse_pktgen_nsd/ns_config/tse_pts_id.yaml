@@ -1,0 +1,4 @@
+initial_config_primitive:
+- name: set license server
+  parameter:
+    license_server: '10.128.0.15'
