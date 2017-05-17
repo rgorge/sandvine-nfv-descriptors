@@ -29,7 +29,7 @@ nsd:nsd-catalog:
             scaling-policy:
             -   scaling-type: "automatic"
                 scale-out-operation-type: "OR"
-                cooldown-time: 60
+                cooldown-time: 240
                 scale-in-operation-type: "OR"
                 enabled: "true"
                 threshold-time: 10
