@@ -12,8 +12,8 @@ PKG_YAML:= $(addsuffix .yaml, $(VNFD_DIRS) $(NSD_DIRS) )
 server_vnfd_IMAGE ?= "Ubuntu 16.04.1 LTS - Xenial Xerus - 64-bit - Cloud Based Image"
 pktgen_dpdk_vnfd_IMAGE ?= $(server_vnfd_IMAGE)
 cc_vnfd_IMAGE     ?= "Ubuntu 16.04.1 LTS - Xenial Xerus - 64-bit - Cloud Based Image"
-tse_vnfd_IMAGE    ?= TSE_1.00.00-0075_x86_64_el7
-pts_vnfd_IMAGE    ?= PTS_7.40.00-0309_x86_64_el7
+tse_vnfd_IMAGE    ?= tse
+pts_vnfd_IMAGE    ?= pts
 spb_vnfd_IMAGE    ?= spb
 LICENSE_SERVER    ?= license.sandvine.rocks
 

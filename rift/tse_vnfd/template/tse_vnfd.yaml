@@ -39,7 +39,7 @@ vnfd:vnfd-catalog:
             vnfd:guest-epa:
                 vnfd:cpu-pinning-policy: ANY
             vnfd:id: vdu0
-            vnfd:image: TSE_1.00.00-0075_x86_64_el7.pts_tse_dev_integration
+            vnfd:image: tse
             vnfd:name: vdu0
             vnfd:vm-flavor:
                 vnfd:memory-mb: '5120'
