@@ -70,7 +70,8 @@ resources:
 
         runcmd:
             - apt-get update
-            - cd /tmp
+            - mkdir -p /opt
+            - cd /opt
             - sed -i  's/\(APT::Periodic.*\)"1"/\1 "0"/g' /etc/apt/apt.conf.d/20auto-upgrades
             - wget -nd http://repo.riftio.com/releases/open.riftio.com/4.3.3/install-riftware
             - bash ./install-riftware platform
