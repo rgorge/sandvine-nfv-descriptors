@@ -1,0 +1,211 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A stack with 1 vLM VM and associated resources
+
+parameters:
+
+  index:
+    type: string
+    description: Index number of VM
+    label: VM index
+  flavor:
+    type: string
+    description: Flavor
+    label: Flavor
+  image:
+    type: string
+  management_network:
+    type: string
+  service_network:
+    type: string
+  security_group:
+    type: string
+
+  dns_domain:
+    type: string
+
+  management_provider_network:
+    type: string
+
+  cik:
+    type: string
+
+
+resources:
+
+
+  vm:
+    type: OS::Nova::Server
+    properties:
+      name:
+        str_replace:
+          template:
+            LM__index__
+          params:
+            __index__:  { get_param: index }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks: 
+       - port: { get_resource: management_port }
+       - port: { get_resource: service_port }
+      user_data_format: RAW
+      user_data: { get_resource: user_data }
+
+  user_data:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: { get_resource: cloud_config }
+        - config: { get_resource: cik_config }
+
+
+  management_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: management_network }
+      port_security_enabled: true
+      security_groups:
+        - { get_param: security_group }
+
+  service_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: service_network }
+      port_security_enabled: true
+      security_groups:
+        - { get_param: security_group }
+
+  fip: 
+    type: OS::Neutron::FloatingIP
+    properties: 
+      floating_network: { get_param: management_provider_network }
+###      dns_domain: { get_param: dns_domain }
+###      dns_name: 
+###        str_replace:
+###          template:
+###            lm__index__
+###          params:
+###            __index__:  { get_param: index }
+
+  fip_assign:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: fip }
+      port_id: { get_resource: management_port }
+
+
+  cik_config:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        merge_how: 'dict(recurse_array,no_replace)+list(append)'
+        write_files:
+          - path: "/pl2/cik"
+            encoding: "base64"
+            content: { get_param: cik }
+
+  cloud_config:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+
+        merge_how: 'dict(recurse_array,no_replace)+list(append)'
+        runcmd:
+          - ["/usr/libexec/upload_cik.sh"]
+          - ["ln","-s","/etc/service/zeroconf","/var/service"]
+          - ["/usr/libexec/fixroutes.sh","21","aux_1"]
+          - ["/usr/libexec/get_osm_keys.sh"]
+        write_files:
+          - path: "/usr/libexec/get_osm_keys.sh"
+            permissions: "0775"
+            content: |
+              #!/bin/bash
+              keyindex=-1
+              lastexitcode=0
+              while [ $lastexitcode -eq 0 ]; do
+                keyindex=$((keyindex + 1))
+                curl -f -o /tmp/tmpkey http://169.254.169.254/latest/meta-data/public-keys/$keyindex/openssh-key
+                lastexitcode=$?
+                if [ $lastexitcode -eq 0 ]; then
+                  cat /tmp/tmpkey >> /pl2/pl2/ssh-authorized-keys/root
+                fi
+              done
+              if [ -e /pl2/pl2/ssh-authorized-keys/root ]; then
+                chmod 0600 /pl2/pl2/ssh-authorized-keys/root
+              fi
+          - path: /usr/libexec/fixroutes.sh
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              TABLE=$1
+              DEVICE=$2
+              echo TABLE $TABLE >> /var/log/fixroutes-$DEVICE.log
+              echo DEVICE $DEVICE >> /var/log/fixroutes-$DEVICE.log
+              IP_CIDR=$(ip -o -f inet addr show $DEVICE |grep brd|awk '{print $4}')
+              SUFFIX=$(echo $IP_CIDR|awk -F '/' '{print $2}')
+              NETWORK=$(ipcalc -n $IP_CIDR|awk -F '=' '{print $2}')
+              echo IP_CIDR $IP_CIDR >> /var/log/fixroutes-$DEVICE.log
+              echo SUFFIX $SUFFIX >> /var/log/fixroutes-$DEVICE.log
+              echo NETWORK $NETWORK >> /var/log/fixroutes-$DEVICE.log
+              CIDR="$NETWORK/$SUFFIX"
+              echo CIDR $CIDR >> /var/log/fixroutes-$DEVICE.log
+              # This assumes that GW address is network address with .0 replaced by .1
+              GATEWAY="$(echo $NETWORK|sed s'/.$//')1"
+              echo GATEWAY $GATEWAY >> /var/log/fixroutes-$DEVICE.log
+              ip route add default via $GATEWAY table $TABLE
+              ip route add $CIDR dev $DEVICE table $TABLE
+              ip rule add from $CIDR table $TABLE
+              ip route flush cache
+              exit 0
+          - path: "/pl2/pl2/system-conf/psf/license-manager/license-manager_enabled"
+            permissions: "0664"
+            owner: root
+          - path: "/pl2/pl2/system-conf/if_aux_1_interface"
+            permissions: "0664"
+            owner: root
+            content: |
+              eth1
+          - path: "/usr/libexec/upload_cik.sh"
+            permissions: "0775"
+            content: |
+              #!/bin/bash
+              while ! curl -X POST -F 'certificatefile=@/pl2/cik'  http://admin:pldemo00@localhost:8092/api/license/certificate/upload >> /var/log/lmupload.log 2>&1
+              do
+                sleep 30
+              done
+          - path: "/etc/service/zeroconf/run"
+            permissions: "0775"
+            content: |
+              #!/usr/bin/env python
+              from zeroconf import Zeroconf, ServiceInfo, ServiceBrowser
+              import socket
+              import logging
+              import safelogging
+              import subprocess
+              import time
+              import netifaces
+              LOG=logging.getLogger()
+              me=subprocess.check_output(['hostname']).rstrip('\n')
+              def setup_logging():
+                  handler = safelogging.ResilientSysLogHandler("/dev/log", "local2")
+                  format = ("zeroconf: %(message)s")
+                  handler.setFormatter(logging.Formatter(format))
+                  root = logging.getLogger()
+                  root.addHandler(handler)
+                  root.setLevel(logging.DEBUG)
+        
+              if __name__ == '__main__':
+                  while [i['addr'] for i in netifaces.ifaddresses('aux_1')[netifaces.AF_INET]]==[]:
+                      time.sleep(10)
+                  myaddr=[i['addr'] for i in netifaces.ifaddresses('aux_1')[netifaces.AF_INET]]
+                  setup_logging()
+                  r = Zeroconf(interfaces=myaddr)
+                  desc = {}
+                  info = ServiceInfo("_http._tcp.local.", "LM._http._tcp.local.", socket.inet_aton(myaddr[0]), 1234, 0, 0, desc)
+                  LOG.info("Registering service, LM._http._tcp.local. "+myaddr[0])
+                  r.register_service(info)
+                  while True:
+                      time.sleep(1)

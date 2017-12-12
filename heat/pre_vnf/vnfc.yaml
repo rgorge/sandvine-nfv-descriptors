@@ -1,0 +1,303 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A stack with 1 vPRE VM and associated resources
+
+parameters:
+
+
+
+  name:
+    type: string
+  flavor:
+    type: string
+  image:
+    type: string
+
+  channel_ports:
+    type: comma_delimited_list
+    default: ""
+
+  management_ports:
+    type: comma_delimited_list
+    default: ""
+
+
+resources:
+
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      user_data: { get_resource: cloud_config }
+      user_data_format: RAW
+      networks:
+        repeat:
+          template:
+            port : <%port%>
+          for_each:
+            <%port%> :
+              str_split:
+                - ','
+                -  str_replace:
+                     template: 
+                        __content__
+                     params:
+                        __content__: { list_join: [',',{str_split: [',',{ list_join: [',',{get_param: management_ports}, {get_param: channel_ports}] } ] } ] }
+
+  cloud_config:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        merge_how: 'dict(recurse_array,no_replace)+list(append)'
+        runcmd:
+          - ["ln","-s","/etc/service/zeroconf","/var/service"]
+          - ["/usr/libexec/get_osm_keys.sh"]
+        write_files:
+          - path: "/usr/libexec/config_local_stats"
+            permissions: "0775"
+            content: |
+              #!/bin/bash
+              source /etc/SYSTEM
+              source /etc/functions
+              touch $PLSYSPATH/local_statistics
+              cat >$PLSYSPATH/plsd.hosts.LOCAL <<-EOF
+                   pldhost 127.0.0.1
+                   plduser packetlogicd
+                   pldpassword secret2
+              EOF
+              init_d_run statistics
+              commitlog "Local statistics enabled (with pldb/pls restart)"
+              init_d_run config_remote_plsd
+              pl2_sql -c "update config set value='1' where name='INSIGHTS_TRAFFIC_ENABLED';"
+              pl2_sql -c "update config set value='1' where name='INSIGHTS_USE_SESSION_CONTEXT';"
+              pl2_sql -c "update config set value='session' where name='INSIGHTS_SESSION_CONTEXT_SCHEMAS';"
+              pl2_sql -c "update config set value='subId' where name='INSIGHTS_DIMENSIONS_SUBSCRIBER';"
+              pl2_sql -c "insert into statisticsrules (name,insights_traffic,comments) values ('Insights','t','Cloud-init');"
+              sv restart plsd
+              sv restart pldbd
+              sv restart plosloader
+          - path: "/usr/libexec/get_osm_keys.sh"
+            permissions: "0775"
+            content: |
+              #!/bin/bash
+              keyindex=-1
+              lastexitcode=0
+              while [ $lastexitcode -eq 0 ]; do
+                keyindex=$((keyindex + 1))
+                curl -f -o /tmp/tmpkey http://169.254.169.254/latest/meta-data/public-keys/$keyindex/openssh-key
+                lastexitcode=$?
+                if [ $lastexitcode -eq 0 ]; then
+                  cat /tmp/tmpkey >> /pl2/pl2/ssh-authorized-keys/root
+                fi
+              done
+              if [ -e /pl2/pl2/ssh-authorized-keys/root ]; then
+                chmod 0600 /pl2/pl2/ssh-authorized-keys/root
+              fi
+          - path: "/pl2/pl2/system-conf/if_aux_1_interface"
+            permissions: "0664"
+            owner: root
+            content: |
+              eth1
+          - path: "/pl2/pl2/system-conf/if_aux_2_interface"
+            permissions: "0664"
+            owner: root
+            content: |
+              eth2
+          - path: "/usr/libexec/lmregister.sh"
+            permissions: "0775"
+            content: |
+              #!/bin/bash
+              echo Starting >> /var/log/lmregister.log
+              lmhost=$1
+              ipaddr=$2
+              pool=PRE
+              name=$(hostname)
+              data=$(echo "{\"name\":\"${name}\",\"ip\":\"${ipaddr}\",\"ssh_port\":42002,\"license-pool\":\"${pool}\"}")
+              echo $data >> /var/log/lmregister.log 2>&1
+              echo Found License manager !!!
+              curl -X DELETE http://admin:pldemo00@${lmhost}:8092/api/systems/$name >> /var/log/lmregister.log 2>&1 
+              system=$(curl http://admin:pldemo00@${lmhost}:8092/api/systems |gzip -d - |sed 's/name/\'$'\n/g' |grep $ipaddr |awk -F"[\"]" '{print $3}')
+              if [ "$system" != "" ];then
+                curl -X DELETE http://admin:pldemo00@${lmhost}:8092/api/systems/$system >> /var/log/lmregister.log 2>&1 
+              fi
+              while ! curl -H "Content-Type: application/json" -X POST -d $data http://admin:pldemo00@${lmhost}:8092/api/systems >> /var/log/lmregister.log 2>&1
+              do
+                sleep 30
+              done
+        
+          - path: "/etc/service/zeroconf/run"
+            permissions: "0775"
+            content: |
+              #!/usr/bin/env python
+              from zeroconf import Zeroconf, ServiceInfo, ServiceBrowser
+              import socket
+              import logging
+              import safelogging
+              import subprocess
+              import time
+              import netifaces
+              import os
+              LOG=logging.getLogger()
+              me=subprocess.check_output(['hostname']).rstrip('\n')
+              backlog=[]
+        
+              def clear_backlog():
+                   while len(backlog) > 0:
+                       sname,saddr,locaddr=backlog.pop()
+                       LOG.info("Clear backlog "+sname)
+                       if sname.startswith('psm'):
+                           handle_psm(sname,saddr,locaddr)
+                       elif sname.startswith('pre'):
+                           handle_pre(sname,saddr,locaddr)
+                       else:
+                           LOG.info('Trying to clear backlog, no handler for '+sname)
+        
+              def handle_psm(svcname,svcaddr,myaddr):
+                   LOG.info("handle_psm PSM: "+svcname.split('.')[0]+': '+svcaddr)
+                   if not svcname.startswith(me):
+                       LOG.info("Peer, adding redundancy sync config")
+                       changed=False
+                       LOG.info("Trying psm-config")
+                       psmconfout=""
+                       while not psmconfout:
+                           psmconfout=subprocess.check_output('psm-config;exit 0',shell=True)
+                           time.sleep(10)
+                       conf=json.loads(psmconfout)
+                       for comp in conf['components']:
+                           if comp['componentId']=='psm.model.syncer.client':
+                               syncnodes=[]
+                               for node in comp['config']['nodes']:
+                                   syncnodes.append(node['hostName'])
+                               if svcaddr not in syncnodes:
+                                   changed=True
+                                   syncclientnode={'useDirectConnection':True,'hostName':svcaddr}
+                                   comp['config']['nodes'].append(syncclientnode)
+                           if comp['componentId']=='psm.model.syncer.server':
+                               listeners=[]
+                               for listener in comp['config']['directListeners']:
+                                   listeners.append(listener['listenHost'])
+                               if myaddr not in listeners:
+                                   changed=True
+                                   syncserverlistener={'listenHost':myaddr}
+                                   comp['config']['directListeners'].append(syncserverlistener)
+                       if changed:
+                           json.dump(conf,open('zeroconf.json','w'))
+                           res=subprocess.call(['psm-config','zeroconf.json'])
+                           LOG.info("Committed config with exit code"+str(res))
+                       changed=False
+                       syncnodes=[]
+                       listeners=[]
+        
+              def handle_pre(svcname,svcaddr,myaddr):
+                  LOG.info("handle_pre PRE: "+svcname.split('.')[0]+': '+svcaddr)
+                  psmconfout=""
+                  while not psmconfout:
+                      psmconfout=subprocess.check_output('psm-config;exit 0',shell=True)
+                      time.sleep(10)
+                  conf=json.loads(psmconfout)
+                  #conf=json.loads(subprocess.check_output(['psm-config']))
+                  provnodes=[]
+                  for comp in conf['components']:
+                      if comp['componentId']=='psm.provisionerng.host':
+                          provnodes.append(comp['config']['hostName'])
+                  if svcaddr not in provnodes:
+                      provnode={'componentId':'psm.provisionerng.host','instanceId':None,'version':4,'config':{'group':'','serviceOrPort':'','startupState':'enabled','hostName':svcaddr,'useDirectConnection':False}}
+                      conf['components'].append(provnode)
+                      json.dump(conf,open('zeroconf.json','w'))
+                      res=subprocess.call(['psm-config','zeroconf.json'])
+                      LOG.info("Committed config with exit code "+str(res))
+        
+              def handle_pic(svcname,svcaddr,myaddr):
+                  LOG.info("handle_pic PIC: "+svcname.split('.')[0]+': '+svcaddr)
+                  conffilename="/pl2/pl2/system-conf/insights_cluster.conf"
+                  pics_configured=[]
+                  if os.path.exists(conffilename):
+                     LOG.info("Insights data collectors configured, checking if PIC is there")
+                     conffile=open(conffilename,'r')
+                     for pic in conffile.readlines():
+                         if pic.startswith('host'):
+                             pics_configured.append(pic.split()[1])
+                     conffile.close()
+                  if svcaddr not in pics_configured:
+                     LOG.info("This PIC is new, adding")
+                     if os.path.exists(conffilename):
+                         conffile=open(conffilename,'a')
+                     else:
+                         conffile=open(conffilename,'w')
+                     conffile.write('host '+svcaddr+'\n')
+                     conffile.close()
+                     if len(pics_configured)>2:
+                         try:
+                             subprocess.check_call(['sv','restart','plsd-LOCAL-0'])
+                         except CalledProcessError:
+                             pass
+        
+              class Listener(object):
+                  def add_service(self, zeroconf, type, name):
+                      licensed=os.path.exists("/pl2/pl2/system-conf/packetlogicd.lic")
+                      svnet=subprocess.check_output(["ip", "-o", "-f", "inet", "addr", "show", "dev", "aux_1"]).split()[3].split('/')[0]
+                      info = zeroconf.get_service_info(type,name)
+                      addr = socket.inet_ntoa(info.address)
+                      if name == "PSM._http._tcp.local.":
+                          if licensed:
+                              LOG.info("licensed, processing PSM "+name+" immediately")
+                              #handle_psm(name,addr,svnet)
+                          else:
+                              LOG.info("not licensed, backlogging psm "+name)
+                              #backlog.append((name,addr,svnet))
+                      elif name == "PRE._http._tcp.local.":
+                          if licensed:
+                              LOG.info("licensed, processing PRE "+name+" immediately")
+                              #handle_pre(name,addr,svnet)
+                          else:
+                              LOG.info("not licensed, backlogging PRE "+name)
+                              #backlog.append((name,addr,svnet))
+                      elif name == "PIC._http._tcp.local.":
+                          if licensed:
+                              LOG.info("licensed, processing PIC "+name+" immediately")
+                              handle_pic(name,addr,svnet)
+                          else:
+                              LOG.info("not licensed, backlogging PIC "+name)
+                              backlog.append((name,addr,svnet))
+                      elif name == "LM._http._tcp.local.":
+                          LOG.info("LM: "+name.split('.')[0]+': '+addr)
+                          LOG.info("Trying to register with LM..")
+                          line="/usr/libexec/lmregister.sh "+addr+" "+svnet+";exit 0"
+                          subprocess.check_output(line,shell=True)
+                          while not os.path.exists("/pl2/pl2/system-conf/packetlogicd.lic"):
+                              time.sleep(10)
+                          LOG.info("Detected license file, clearing backlog, initializing local stats")
+                          subprocess.check_call(["/usr/libexec/config_local_stats"])
+                          clear_backlog()
+                      else:
+                          LOG.info("Unknown service "+name)
+                  def remove_service(self):
+                      LOG.info("Service removed")
+        
+              def setup_logging():
+                  handler = safelogging.ResilientSysLogHandler("/dev/log", "local2")
+                  format = ("zeroconf: %(message)s")
+                  handler.setFormatter(logging.Formatter(format))
+                  root = logging.getLogger()
+                  root.addHandler(handler)
+                  root.setLevel(logging.DEBUG)
+              if __name__ == '__main__':
+                  while [i['addr'] for i in netifaces.ifaddresses('aux_1')[netifaces.AF_INET]]==[]:
+                      time.sleep(10)
+                  myaddr=[i['addr'] for i in netifaces.ifaddresses('aux_1')[netifaces.AF_INET]]
+                  setup_logging()
+                  r = Zeroconf(interfaces=myaddr)
+                  desc = {}
+                  info = ServiceInfo("_http._tcp.local.", "PRE._http._tcp.local.", socket.inet_aton(myaddr[0]), 1234, 0, 0, desc)
+                  LOG.info("Registering service, PRE._http._tcp.local. "+myaddr[0])
+                  r.register_service(info)
+                  listener = Listener()
+                  LOG.info("Starting service browser")
+                  browser = ServiceBrowser(r, "_http._tcp.local.", listener=listener)
+                  while True:
+                      time.sleep(1)

@@ -1,0 +1,142 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A  PRE VNF 
+
+parameters:
+
+  management_network:
+    type: string
+
+  service_network:
+    type: string
+
+  qsync_network:
+    type: string
+
+  flowsync_network:
+    type: string
+
+
+  name:
+    type: string
+    default: pre
+
+  flavor:
+    type: string
+    default: PRE-FLAVOR
+
+
+  channel_networks:
+    type: comma_delimited_list
+
+  channel_ports:
+    type: comma_delimited_list
+
+  channel_networks_count:
+    type: number
+
+  management_provider_network:
+    type: string
+
+  dns_domain:
+    type: string
+
+resources:
+
+# Not needded because channel ports created in contrail_channel.yaml template
+
+#  channels:
+#    type: packetlogic::pre::channel_ports
+#    properties:
+#      networks: { get_param: channel_networks }
+#      networks_count: { get_param: channel_networks_count }
+
+
+
+  servers:
+    type: packetlogic::pre::vnfc
+    properties:
+      name: { get_param: name }
+      flavor: { get_param: flavor }
+      image: PLOS
+      management_ports: [{get_attr: [management_port,show,id]},{get_attr: [service_port,show,id]},{get_attr: [qsync_port,show,id]},{get_attr: [dummy_port,show,id]},{get_attr: [flowsync_port,show,id]}] 
+      channel_ports: { get_param: channel_ports }
+
+
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: pre-security-group
+      rules:
+        - protocol: icmp
+        - protocol: tcp
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          port_range_min: 1
+          port_range_max: 65535
+
+
+  management_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: management_network }
+      port_security_enabled: true
+      security_groups:
+        - { get_resource: security_group }
+
+  service_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: service_network }
+      port_security_enabled: true
+      security_groups:
+        - { get_resource: security_group }
+
+  qsync_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: qsync_network }
+      port_security_enabled: false
+
+  dummy_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: qsync_network }
+      port_security_enabled: false
+
+
+  flowsync_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: flowsync_network }
+      port_security_enabled: false
+
+
+  fip: 
+    type: OS::Neutron::FloatingIP
+    properties: 
+      floating_network: { get_param: management_provider_network }
+###      dns_domain: { get_param: dns_domain }
+###      dns_name: { get_param: name }
+
+  fip_assign:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: fip }
+      port_id: { get_resource: management_port }
+
+
+
+
+
+outputs:
+  lengden:
+    value: { get_param: channel_networks_count }
+#      yaql:
+#        expression: $.data.list_param.len()
+#        data:
+#          list_param: {get_param: channel_networks}    

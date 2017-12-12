@@ -1,0 +1,77 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A PRE VNF that could be indexed
+
+parameters:
+
+
+  management_provider_network:
+    type: string
+    description: Name or ID of the provider network use for management network Floating IPs.
+
+  dns_domain:
+    type: string
+    description: Name of DNS domain to use for Floating IP networks.
+
+  management_network:
+    type: string
+
+  service_network:
+    type: string
+
+  qsync_network:
+    type: string
+
+  flowsync_network:
+    type: string
+
+  index:
+    type: number
+
+  int_networks:
+    type: json
+
+  ext_networks:
+    type: json
+
+  name:
+    type: string
+
+
+
+
+resources:
+
+  pre:
+    type: packetlogic::pre::vnf 
+    properties:
+      name:
+        str_replace:
+          template:
+            __name____index__
+          params:
+            __index__:  { get_param: index }
+            __name__:  { get_param: name }
+      management_network: { get_param: management_network }
+      service_network: { get_param: service_network }
+      qsync_network: { get_param: qsync_network }
+      flowsync_network: { get_param: flowsync_network }
+      management_provider_network: { get_param: management_provider_network }
+#      dns_domain: { get_param: dns_domain }
+      channel_networks_count: 2
+      channel_networks:
+        - get_param: [int_networks, { get_param: index } ]
+        - get_param: [ext_networks, { get_param: index } ]
+
+
+outputs:
+  int_networks:
+    value: { get_param: int_networks}
+  ext_networks:
+    value: { get_param: ext_networks}
+  channel_networks:
+    value:
+      - get_param: [int_networks, { get_param: index } ]
+      - get_param: [ext_networks, { get_param: index } ]

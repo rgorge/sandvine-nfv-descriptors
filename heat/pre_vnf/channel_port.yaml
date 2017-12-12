@@ -1,0 +1,30 @@
+heat_template_version: 2016-04-08
+
+description: >
+  Networks used for a single channel
+
+
+parameters:
+
+  index:
+    type: number
+    description: Index number
+    label: Index
+
+  networks:
+    type: comma_delimited_list
+
+
+
+resources:
+
+
+  port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: [networks, { get_param: index }] }
+      port_security_enabled: False 
+
+outputs:
+  id:
+    value: { get_attr: [port,show,id] }
