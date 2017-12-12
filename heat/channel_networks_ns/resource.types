@@ -1,0 +1,2 @@
+packetlogic::channel_networks::channel   channel_networks_ns/channel.yaml
+packetlogic::channel_networks::ns        channel_networks_ns/nsd.yaml

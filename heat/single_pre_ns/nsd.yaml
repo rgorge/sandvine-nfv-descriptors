@@ -1,0 +1,79 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A network service (NS) representing a single PRE (plus an LM)
+
+parameters:
+
+  management_provider_network:
+    type: string
+    description: Name or ID of the provider network use for management network Floating IPs.
+
+  cik:
+    type: string
+    description: Base 64 encoded string of CIK file content.
+
+  dns_domain:
+    type: string
+    description: Name of DNS domain to use for Floating IP networks.
+    default: dummy.
+
+
+resources:
+
+#
+#  General Networks
+#
+
+  networks:
+    type: packetlogic::standard_networks::ns
+    properties:
+      management_provider_network: { get_param: management_provider_network }
+      subscriber_provider_network: { get_param: management_provider_network }
+      dns_domain: { get_param: dns_domain }
+
+
+#
+#  General VNFs
+#
+
+  lm_vnf:
+    type: packetlogic::lm::vnf
+    properties:
+      management_network: { get_attr: [networks,management_net] }
+      management_provider_network: { get_param: management_provider_network }
+      dns_domain: { get_param: dns_domain }
+      service_network: { get_attr: [networks,service_net] }
+      cik: { get_param: cik }
+
+#
+#  Channel Networks
+#
+
+  pre1_channels:
+    type: packetlogic::channel_networks::ns
+    properties:
+      count: 1
+      set: pre1
+
+#
+#  PRE VNFs
+#
+
+
+  pre1_vnf:
+    type: packetlogic::pre::vnf
+    properties:
+      name: pre1
+      management_network: { get_attr: [networks,management_net] }
+      service_network: { get_attr: [networks,service_net] }
+      qsync_network: { get_attr: [networks,qsync_net] }
+      flowsync_network: { get_attr: [networks,flowsync_net] }
+      channel_networks: { get_attr: [pre1_channels,networks] }
+      management_provider_network: { get_param: management_provider_network }
+      dns_domain: { get_param: dns_domain }
+      channel_networks_count: 2
+
+
+

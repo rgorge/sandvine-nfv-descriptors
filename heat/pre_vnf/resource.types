@@ -1,0 +1,7 @@
+packetlogic::pre::vnf            pre_vnf/vnfd.yaml
+packetlogic::pre::vnfc           pre_vnf/vnfc.yaml
+packetlogic::pre::channel_ports  pre_vnf/channel_ports.yaml
+packetlogic::pre::channel_port   pre_vnf/channel_port.yaml
+packetlogic::pre::vnf_indexed    pre_vnf/vnfd_indexed.yaml
+packetlogic::pre::vnf_contrail   pre_vnf/vnfd_contrail.yaml
+packetlogic::pre_scaling::ns     pre_vnf/pre_scaling_ns.yaml

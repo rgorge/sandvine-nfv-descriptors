@@ -1,0 +1,34 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A set of channels
+
+parameters:
+
+  networks:
+    type: comma_delimited_list
+
+  networks_count:
+    type: number
+
+resources:
+
+  ports:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: networks_count } 
+#        yaql:
+#          expression: $.data.list_param.len()
+#          data:
+#            list_param: {get_param: networks}    
+      resource_def: 
+        type: packetlogic::pre::channel_port
+        properties:
+          index: "%index%"
+          networks: { get_param: networks }
+
+
+outputs:
+  ports:
+    value: { get_attr: [ports,id] }

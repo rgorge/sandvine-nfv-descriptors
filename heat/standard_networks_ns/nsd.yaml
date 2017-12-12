@@ -1,0 +1,165 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A network service (NS) representing a complete PL system
+
+parameters:
+
+  management_provider_network:
+    type: string
+    description: Name or ID of the provider network use for management network Floating IPs.
+
+  subscriber_provider_network:
+    type: string
+    description: Name or ID of the provider network use for subscriber network Floating IPs.
+
+  dns_domain:
+    type: string
+    description: Name of DNS domain to use for Floating IP networks.
+
+
+resources:
+
+
+#
+# Networks
+#
+  service_net:
+    type: OS::Neutron::Net
+    properties:
+      name: service_net
+
+  service_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: service_net }
+      name: service_subnet
+      cidr: 192.168.101.0/24
+
+  management_net:
+    type: OS::Neutron::Net
+    properties:
+      name: management_net
+
+  management_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: management_net }
+      name: management_subnet
+      cidr: 192.168.100.0/24
+      dns_nameservers: [ 8.8.8.8, 8.8.4.4 ]
+     
+  management_router:
+    type: OS::Neutron::Router
+    properties:
+      name: Management router
+      external_gateway_info:
+         network: { get_param: management_provider_network}
+
+  management_router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: management_router }
+      subnet: { get_resource: management_subnet }
+
+
+  subscriber_net:
+    type: OS::Neutron::Net
+    properties:
+      name: subscriber_net
+
+  subscriber_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: subscriber_net }
+      name: subscriber_subnet
+      cidr: 192.168.110.0/24
+      allocation_pools:
+        - start: 192.168.110.10
+          end: 192.168.110.100
+     
+  subscriber_vip_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: subscriber_net}
+      name: vPSM Virtual IP
+#      port_security_enabled: false
+      fixed_ips:
+       - subnet: { get_resource: subscriber_subnet}
+         ip_address: 192.168.110.200
+
+
+  subscriber_router:
+    type: OS::Neutron::Router
+    properties:
+      name: Subscriber router
+      external_gateway_info:
+         network: { get_param: subscriber_provider_network}
+
+  subscriber_router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: subscriber_router }
+      subnet: { get_resource: subscriber_subnet }
+
+
+  subscriber_vip_fip: 
+    type: OS::Neutron::FloatingIP
+    properties: 
+      floating_network: { get_param: subscriber_provider_network }
+###      dns_domain: { get_param: dns_domain }
+###      dns_name: psm-vip
+
+  subscriber fip_assign:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: subscriber_vip_fip }
+      port_id: { get_resource: subscriber_vip_port }
+
+  qsync_net:
+    type: OS::Neutron::Net
+    properties:
+      name: qsync_net
+           
+
+
+  qsync_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: qsync_net }
+      name: qsync_subnet
+      cidr: 192.168.120.0/24
+
+  flowsync_net:
+    type: OS::Neutron::Net
+    properties:
+      name: flowsync_net
+           
+
+
+  flowsync_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: flowsync_net }
+      name: flowsync_subnet
+      cidr: 192.168.121.0/24
+  
+
+
+outputs:
+  management_net:
+    value: { get_attr: [management_net,show,id] }
+  service_net:
+    value: { get_attr: [service_net,show,id] }
+  subscriber_net:
+    value: { get_attr: [subscriber_net,show,id] }
+  qsync_net:
+    value: { get_attr: [qsync_net,show,id] }
+  flowsync_net:
+    value: { get_attr: [flowsync_net,show,id] }
+  subscriber_provider:
+    value: { get_param: subscriber_provider_network}
+  management_provider:
+    value: { get_param: management_provider_network}
+

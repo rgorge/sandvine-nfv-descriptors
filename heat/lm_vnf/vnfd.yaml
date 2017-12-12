@@ -1,0 +1,74 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A License Manager VNF
+
+parameters:
+
+  management_network:
+    type: string
+    description: Management network
+    label: Management net
+
+  service_network:
+    type: string
+    description: Service network
+    label: Service net
+
+  count:
+    type: number
+    default: 1
+
+  lm_flavor:
+    type: string
+    description: LM sizes
+    label: LM flavor
+    default: LM-FLAVOR
+
+  dns_domain:
+    type: string
+
+  management_provider_network:
+    type: string
+
+  cik:
+    type: string
+
+resources:
+
+
+  servers:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count }
+      resource_def: 
+        type: packetlogic::lm::vnfc
+        properties:
+          index: "%index%"
+          flavor: { get_param: lm_flavor }
+          image: packetlogic2-stats_64-18.1.1.4-1711210954-lm1.0.5.5-disk1.qcow2
+          management_network: { get_param: management_network }
+          service_network: { get_param: service_network }
+          security_group: { get_resource: security_group }
+          management_provider_network: { get_param: management_provider_network }
+          dns_domain: { get_param: dns_domain }
+          cik: { get_param: cik }
+
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: lm-security-group
+      rules:
+        - protocol: icmp
+        - protocol: tcp
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          port_range_min: 1
+          port_range_max: 65535
+
+
+
+
