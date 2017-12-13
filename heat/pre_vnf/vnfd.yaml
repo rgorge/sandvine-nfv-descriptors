@@ -56,7 +56,7 @@ resources:
     properties:
       name: { get_param: name }
       flavor: { get_param: flavor }
-      image: packetlogic2-xeon-plos_64-18.1.1.4-1711210954-disk1
+      image: b0bc27be-b358-4578-b12f-5a27059ceed8
       management_ports: [{get_attr: [management_port,show,id]},{get_attr: [service_port,show,id]},{get_attr: [qsync_port,show,id]},{get_attr: [flowsync_port,show,id]},{get_attr: [monitor_port,show,id]}] 
       channel_ports: { get_attr: [channels,ports] }
 
