@@ -73,7 +73,7 @@ resources:
     type: OS::Neutron::Port
     properties:
       network: { get_param: service_network }
- #     port_security_enabled: true
+#      port_security_enabled: true
       security_groups:
         - { get_param: security_group }
 
