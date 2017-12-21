@@ -24,7 +24,7 @@ parameters:
     type: string
     description: LM sizes
     label: LM flavor
-    default: m1.large
+    default: LM-FLAVOR
 
   dns_domain:
     type: string
