@@ -47,7 +47,7 @@ resources:
         properties:
           index: "%index%"
           flavor: { get_param: lm_flavor }
-          image: PLOS
+          image: STATS
           management_network: { get_param: management_network }
           service_network: { get_param: service_network }
           security_group: { get_resource: security_group }
