@@ -54,11 +54,13 @@ resources:
     properties:
       cloud_config:
         merge_how: 'dict(recurse_array,no_replace)+list(append)'
+        bootcmd:
+          - ["set-aux-interfaces-qty", "2"]
         runcmd:
           - ["ln","-s","/etc/service/zeroconf","/var/service"]
-          - ["/usr/libexec/get_osm_keys.sh"]
+          - ["get_osm_keys.sh"]
         write_files:
-          - path: "/usr/libexec/config_local_stats"
+          - path: "/usr/libexec/cloud/config_local_stats"
             permissions: "0775"
             content: |
               #!/bin/bash
@@ -81,7 +83,7 @@ resources:
               sv restart plsd
               sv restart pldbd
               sv restart plosloader
-          - path: "/usr/libexec/get_osm_keys.sh"
+          - path: "/usr/libexec/cloud/get_osm_keys.sh"
             permissions: "0775"
             content: |
               #!/bin/bash
@@ -108,7 +110,7 @@ resources:
             owner: root
             content: |
               eth2
-          - path: "/usr/libexec/lmregister.sh"
+          - path: "/usr/libexec/cloud/lmregister.sh"
             permissions: "0775"
             content: |
               #!/bin/bash
@@ -150,9 +152,9 @@ resources:
                    while len(backlog) > 0:
                        sname,saddr,locaddr=backlog.pop()
                        LOG.info("Clear backlog "+sname)
-                       if sname.startswith('psm'):
+                       if sname.split('.')[1] == 'PSM':
                            handle_psm(sname,saddr,locaddr)
-                       elif sname.startswith('pre'):
+                       elif sname.split('.')[1] == 'PRE':
                            handle_pre(sname,saddr,locaddr)
                        else:
                            LOG.info('Trying to clear backlog, no handler for '+sname)
@@ -243,21 +245,21 @@ resources:
                       svnet=subprocess.check_output(["ip", "-o", "-f", "inet", "addr", "show", "dev", "aux_1"]).split()[3].split('/')[0]
                       info = zeroconf.get_service_info(type,name)
                       addr = socket.inet_ntoa(info.address)
-                      if name == "PSM._http._tcp.local.":
+                      if name.split('.')[1] == "PSM":
                           if licensed:
                               LOG.info("licensed, processing PSM "+name+" immediately")
                               #handle_psm(name,addr,svnet)
                           else:
                               LOG.info("not licensed, backlogging psm "+name)
                               #backlog.append((name,addr,svnet))
-                      elif name == "PRE._http._tcp.local.":
+                      elif name.split('.')[1] == "PRE":
                           if licensed:
                               LOG.info("licensed, processing PRE "+name+" immediately")
                               #handle_pre(name,addr,svnet)
                           else:
                               LOG.info("not licensed, backlogging PRE "+name)
                               #backlog.append((name,addr,svnet))
-                      elif name == "PIC._http._tcp.local.":
+                      elif name.split('.')[1] == "PIC":
                           if licensed:
                               LOG.info("licensed, processing PIC "+name+" immediately")
                               handle_pic(name,addr,svnet)
@@ -267,12 +269,12 @@ resources:
                       elif name == "LM._http._tcp.local.":
                           LOG.info("LM: "+name.split('.')[0]+': '+addr)
                           LOG.info("Trying to register with LM..")
-                          line="/usr/libexec/lmregister.sh "+addr+" "+svnet+";exit 0"
+                          line="/usr/libexec/cloud/lmregister.sh "+addr+" "+svnet+";exit 0"
                           subprocess.check_output(line,shell=True)
                           while not os.path.exists("/pl2/pl2/system-conf/packetlogicd.lic"):
                               time.sleep(10)
                           LOG.info("Detected license file, clearing backlog, initializing local stats")
-                          subprocess.check_call(["/usr/libexec/config_local_stats"])
+                          subprocess.check_call(["config_local_stats"])
                           clear_backlog()
                       else:
                           LOG.info("Unknown service "+name)
@@ -290,10 +292,11 @@ resources:
                   while [i['addr'] for i in netifaces.ifaddresses('aux_1')[netifaces.AF_INET]]==[]:
                       time.sleep(10)
                   myaddr=[i['addr'] for i in netifaces.ifaddresses('aux_1')[netifaces.AF_INET]]
+                  serviceindex=myaddr[0].split('.')[-1]
                   setup_logging()
                   r = Zeroconf(interfaces=myaddr)
                   desc = {}
-                  info = ServiceInfo("_http._tcp.local.", "PRE._http._tcp.local.", socket.inet_aton(myaddr[0]), 1234, 0, 0, desc)
+                  info = ServiceInfo("_http._tcp.local.", serviceindex+".PRE._http._tcp.local.", socket.inet_aton(myaddr[0]), 1234, 0, 0, desc)
                   LOG.info("Registering service, PRE._http._tcp.local. "+myaddr[0])
                   r.register_service(info)
                   listener = Listener()
@@ -301,3 +304,4 @@ resources:
                   browser = ServiceBrowser(r, "_http._tcp.local.", listener=listener)
                   while True:
                       time.sleep(1)
+        
