@@ -1,0 +1,58 @@
+heat_template_version: 2016-04-08
+
+
+description: >
+  A set of channels
+
+parameters:
+
+  count:
+    type: number
+    description: Number of channels
+    label: Channel Count
+    default: 1
+
+  set:
+    type: string
+    description: Name/id of the set
+
+resources:
+
+  channels:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count }
+      resource_def: 
+        type: packetlogic::channel_networks::channel
+        properties:
+          index: "%index%"
+          context: { get_param: set }
+
+
+outputs:
+  networks:
+    value:
+      repeat:
+        template:
+          <%foo%>
+        for_each:
+          <%foo%> : 
+            str_split:
+              - ','
+              - list_join:
+                  - ','
+                  - get_attr:
+                    - channels
+                    - networks
+  int_net:
+    value: { get_attr: [channels,int_net] }
+  int_net_port:
+    value: { get_attr: [channels,int_net_port] }
+  int_subnet:
+    value: { get_attr: [channels,int_subnet] }
+  ext_net:
+    value: { get_attr: [channels,ext_net] }
+  ext_net_port:
+    value: { get_attr: [channels,ext_net_port] }
+  ext_subnet:
+    value: { get_attr: [channels,ext_subnet] }

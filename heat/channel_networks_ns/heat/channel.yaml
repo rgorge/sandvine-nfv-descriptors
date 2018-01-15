@@ -1,0 +1,114 @@
+heat_template_version: 2016-04-08
+
+description: >
+  Networks used for a single channel
+
+
+parameters:
+
+  index:
+    type: number
+    description: Index number
+    label: Index
+
+  context:
+    type: string
+    description: Name/id of the context that the channel belongs to
+
+
+
+resources:
+
+
+  int_net:
+    type: OS::Neutron::Net
+    properties:
+      name:
+        str_replace:
+          template:
+            __context__-__index__-int-net
+          params:
+            __index__: { get_param: index }
+            __context__: { get_param: context }
+      shared: False
+      port_security_enabled: False
+
+  int_net_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: int_net}
+      port_security_enabled: False 
+
+
+
+  int_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name:
+        str_replace:
+          template:
+            __context__-__index__-int-subnet
+          params:
+            __index__: { get_param: index }
+            __context__: { get_param: context }
+      network: { get_resource: int_net }
+      cidr: 192.168.80.0/24
+      enable_dhcp: False
+
+  ext_net:
+    type: OS::Neutron::Net
+    properties:
+      name:
+        str_replace:
+          template:
+            __context__-__index__-ext-net
+          params:
+            __index__: { get_param: index }
+            __context__: { get_param: context }
+      shared: False
+      port_security_enabled: False
+
+  ext_net_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: ext_net}
+      port_security_enabled: False 
+
+
+  ext_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name:
+        str_replace:
+          template:
+            __context__-__index__-ext-subnet
+          params:
+            __index__: { get_param: index }
+            __context__: { get_param: context }
+      network: { get_resource: ext_net }
+      cidr: 192.168.80.0/24
+      enable_dhcp: False
+
+
+
+
+outputs:
+  int_net:
+    value: { get_attr: [int_net,show,id] }
+  int_net_port:
+    value: { get_attr: [int_net_port,show,id] }
+  int_subnet:
+    value: { get_attr: [int_subnet,show,id] }
+  ext_net:
+    value: { get_attr: [ext_net,show,id] }
+  ext_net_port:
+    value: { get_attr: [ext_net_port,show,id] }
+  ext_subnet:
+    value: { get_attr: [ext_subnet,show,id] }
+  networks:
+    value: 
+      str_replace:
+        template: __int_net__,__ext_net__
+        params:
+          __int_net__: { get_attr: [int_net,show,id] }
+          __ext_net__: { get_attr: [ext_net,show,id] }
